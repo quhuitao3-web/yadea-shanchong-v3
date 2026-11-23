@@ -50,9 +50,14 @@
   .tick-tl { top: 22px; left: 22px; }
   .tick-bl { bottom: 20px; left: 22px; }
 
-  /* ==================== TOP-RIGHT GLOBAL FULLSCREEN BUTTON ==================== */
-  .global-fs-btn {
+  /* ==================== TOP-RIGHT GLOBAL SOUND & FULLSCREEN BUTTONS ==================== */
+  .global-top-actions {
     position: fixed; top: 18px; right: 26px; z-index: 140;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .global-sfx-btn,
+  .global-fs-btn {
+    position: relative;
     display: inline-flex; align-items: center; gap: 7px;
     height: 34px; padding: 0 14px; border-radius: 999px;
     border: 1px solid rgba(255,255,255,0.24);
@@ -61,16 +66,24 @@
     font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em;
     cursor: pointer; transition: all 0.28s var(--ease-expo);
     box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    white-space: nowrap;
   }
+  .global-sfx-btn.on-light,
   .global-fs-btn.on-light {
     background: rgba(255, 255, 255, 0.86);
     border-color: rgba(14, 14, 16, 0.16); color: #0E0E10;
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
   }
+  .global-sfx-btn.on-orange,
   .global-fs-btn.on-orange {
     background: rgba(14, 14, 16, 0.86);
     border-color: rgba(14, 14, 16, 0.9); color: #fff;
   }
+  .global-sfx-btn.active {
+    background: var(--orange) !important; border-color: var(--orange) !important;
+    color: #fff !important; box-shadow: 0 6px 22px var(--orange-glow);
+  }
+  .global-sfx-btn:hover,
   .global-fs-btn:hover {
     background: var(--orange) !important; border-color: var(--orange) !important;
     color: #fff !important; transform: translateY(-1px);
@@ -717,7 +730,9 @@
     html, body, .deck { height: 100dvh; }
     .side-dots, .kbd-hint, .grid-tick { display: none !important; }
     .mobile-dock { display: flex; }
-    .global-fs-btn { top: 10px; right: 12px; height: 28px; padding: 0 10px; font-size: 10px; }
+    .global-top-actions { top: 10px; right: 12px; gap: 6px; }
+    .global-sfx-btn,
+    .global-fs-btn { height: 28px; padding: 0 10px; font-size: 10px; gap: 4px; }
 
     .slide {
       padding: calc(46px + env(safe-area-inset-top, 0px)) 18px calc(84px + env(safe-area-inset-bottom, 0px));
@@ -789,12 +804,16 @@
   <div class="grid-tick tick-tl">+</div>
   <div class="grid-tick tick-bl">+</div>
 
-  <!-- Top-Right Global Fullscreen Toggle -->
-  <button class="global-fs-btn no-swipe" id="globalFsBtn" onclick="toggleFS()" title="切换全屏演示 (快捷键 F)">
-    <svg id="fsIconExpand" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-    <svg id="fsIconExit" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-    <span id="globalFsLabel">全屏演示</span>
-  </button>
+  <!-- Top-Right Global Sound & Fullscreen Toggles -->
+  <div class="global-top-actions no-swipe">
+    <button type="button" class="global-sfx-btn no-swipe" id="globalSfxBtn" onclick="if(event)event.stopPropagation(); toggleGlobalAudio()" title="开启全案音视频声效">🔇 开启声音</button>
+    <button class="global-fs-btn no-swipe" id="globalFsBtn" onclick="toggleFS()" title="切换全屏演示 (快捷键 F)">
+      <svg id="fsIconExpand" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <svg id="fsIconExit" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+      <span id="globalFsLabel">全屏演示</span>
+    </button>
+  </div>
+  <audio id="iosSilentUnlockAudio" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA" preload="none" playsinline webkit-playsinline="true" x5-playsinline="true" style="display:none;" aria-hidden="true"></audio>
 
   <div class="side-dots" id="sideDots"></div>
 
@@ -1716,6 +1735,7 @@
   const sideDotsWrap = document.getElementById('sideDots');
   const mSpans = Array.from(document.querySelectorAll('#mobileDock .m-mid span'));
   let cur = 0, wheelLock = false, hasUserGesture = false;
+  let globalAudioUnlocked = false, globalMuted = false, silentAudioPlayed = false;
 
   slides.forEach((_, i) => {
     const d = document.createElement('div');
@@ -1725,8 +1745,15 @@
   });
   const dots = Array.from(document.querySelectorAll('.s-dot'));
 
-  function unlockGesture() { hasUserGesture = true; }
-  window.addEventListener('pointerdown', unlockGesture, { passive: true });
+  function unlockGesture() {
+    hasUserGesture = true;
+    if (!globalMuted && typeof unlockAllMobileAudio === 'function') {
+      unlockAllMobileAudio(true);
+    }
+  }
+  window.addEventListener('pointerdown', () => { hasUserGesture = true; }, { passive: true });
+  window.addEventListener('touchend', unlockGesture, { passive: true });
+  window.addEventListener('click', unlockGesture, { passive: true });
   window.addEventListener('keydown', unlockGesture, { passive: true });
 
   window.addEventListener('mousemove', e => {
@@ -1734,20 +1761,29 @@
     document.documentElement.style.setProperty('--my', e.clientY + 'px');
   }, { passive: true });
 
-  // ==================== TOP-RIGHT FULLSCREEN BUTTON ====================
+  // ==================== TOP-RIGHT FULLSCREEN & SOUND BUTTONS ====================
   function syncFsBtn() {
     const btn = document.getElementById('globalFsBtn');
+    const sfxBtn = document.getElementById('globalSfxBtn');
     const active = slides[cur];
-    if (!btn || !active) return;
-    const isFs = !!document.fullscreenElement;
-    btn.classList.toggle('on-light', active.classList.contains('theme-light'));
-    btn.classList.toggle('on-orange', active.classList.contains('theme-orange'));
-    const lbl = document.getElementById('globalFsLabel');
-    const icExpand = document.getElementById('fsIconExpand');
-    const icExit = document.getElementById('fsIconExit');
-    if (lbl) lbl.textContent = isFs ? '退出全屏' : '全屏演示';
-    if (icExpand) icExpand.style.display = isFs ? 'none' : 'block';
-    if (icExit) icExit.style.display = isFs ? 'block' : 'none';
+    if (!active) return;
+    const onLight = active.classList.contains('theme-light');
+    const onOrange = active.classList.contains('theme-orange');
+    if (btn) {
+      const isFs = !!document.fullscreenElement;
+      btn.classList.toggle('on-light', onLight);
+      btn.classList.toggle('on-orange', onOrange);
+      const lbl = document.getElementById('globalFsLabel');
+      const icExpand = document.getElementById('fsIconExpand');
+      const icExit = document.getElementById('fsIconExit');
+      if (lbl) lbl.textContent = isFs ? '退出全屏' : '全屏演示';
+      if (icExpand) icExpand.style.display = isFs ? 'none' : 'block';
+      if (icExit) icExit.style.display = isFs ? 'block' : 'none';
+    }
+    if (sfxBtn) {
+      sfxBtn.classList.toggle('on-light', onLight);
+      sfxBtn.classList.toggle('on-orange', onOrange);
+    }
   }
   function toggleFS() {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
@@ -1806,13 +1842,33 @@
     btn.classList.toggle('active', unmuted);
     btn.textContent = unmuted ? '🔊 现场原声 已开' : '🔇 点击开启现场原声';
   }
+  function tryWeChatUnmutePlay(v, syncFn, onFallback) {
+    if (window.WeixinJSBridge && typeof window.WeixinJSBridge.invoke === 'function') {
+      try {
+        window.WeixinJSBridge.invoke('getNetworkType', {}, () => {
+          v.muted = false;
+          v.volume = 1.0;
+          v.play().then(syncFn).catch(() => {
+            v.muted = true;
+            v.play().catch(()=>{});
+            if (onFallback) onFallback();
+          });
+        });
+        return;
+      } catch (_) {}
+    }
+    v.muted = true;
+    v.play().catch(()=>{});
+    if (onFallback) onFallback();
+  }
   function enterCommuteSlide() {
     const v = document.getElementById('commuteVideo');
     if (!v) return;
     try { v.currentTime = 0; } catch (_) {}
-    if (hasUserGesture && !userMutedCommute) {
+    if (hasUserGesture && !userMutedCommute && !globalMuted) {
       v.muted = false;
-      v.play().then(syncCommuteBtn).catch(() => { v.muted = true; v.play().catch(()=>{}); syncCommuteBtn(); });
+      v.volume = 1.0;
+      v.play().then(syncCommuteBtn).catch(() => tryWeChatUnmutePlay(v, syncCommuteBtn, syncCommuteBtn));
     } else {
       v.muted = true;
       v.play().catch(()=>{});
@@ -1826,10 +1882,12 @@
     v.muted = true;
   }
   function toggleCommuteSfx() {
-    hasUserGesture = true;
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     const v = document.getElementById('commuteVideo');
     if (!v) return;
     v.muted = !v.muted;
+    v.volume = 1.0;
     userMutedCommute = v.muted;
     v.play().then(syncCommuteBtn).catch(syncCommuteBtn);
   }
@@ -1848,9 +1906,10 @@
     const v = document.getElementById('fireVideo');
     if (!v) return;
     try { v.currentTime = 0; } catch (_) {}
-    if (hasUserGesture && !fireUserMuted) {
+    if (hasUserGesture && !fireUserMuted && !globalMuted) {
       v.muted = false;
-      v.play().then(syncFireAudioBtn).catch(() => { v.muted = true; v.play().catch(()=>{}); syncFireAudioBtn(); });
+      v.volume = 1.0;
+      v.play().then(syncFireAudioBtn).catch(() => tryWeChatUnmutePlay(v, syncFireAudioBtn, syncFireAudioBtn));
     } else {
       v.muted = true;
       v.play().catch(()=>{});
@@ -1865,10 +1924,12 @@
     syncFireAudioBtn();
   }
   function toggleFireSfx() {
-    hasUserGesture = true;
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     const v = document.getElementById('fireVideo');
     if (!v) return;
     v.muted = !v.muted;
+    v.volume = 1.0;
     fireUserMuted = v.muted;
     v.play().then(syncFireAudioBtn).catch(syncFireAudioBtn);
   }
@@ -1887,6 +1948,9 @@
 
   function goTo(idx) {
     if (idx < 0 || idx >= slides.length || idx === cur) return;
+    if (hasUserGesture && !globalMuted && typeof unlockAllMobileAudio === 'function') {
+      unlockAllMobileAudio(false);
+    }
     stopMediaAcrossSlides();
     slides.forEach((s, i) => {
       s.classList.remove('active', 'prev');
@@ -1960,6 +2024,8 @@
   // ==================== P05 POLICY VIDEO ====================
   let prevPolicyUrl = null;
   function playEmbeddedPolicyVideo() {
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     const vid = document.getElementById('policyVideo');
     const poster = document.getElementById('policyPoster');
     const hud = document.getElementById('policyHud');
@@ -1968,6 +2034,8 @@
     if (poster) poster.style.display = 'none';
     if (hud) hud.style.display = 'none';
     vid.style.display = 'block';
+    vid.muted = false;
+    vid.volume = 1.0;
     try { vid.currentTime = 0; } catch (_) {}
     vid.play().catch(()=>{});
     if (st) st.textContent = '正在播放：国家政策宣讲与央视《新闻联播》实拍短片';
@@ -1979,6 +2047,8 @@
   function loadLocalVideo(input) {
     const file = input.files && input.files[0];
     if (!file) return;
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     const vid = document.getElementById('policyVideo');
     const poster = document.getElementById('policyPoster');
     const hud = document.getElementById('policyHud');
@@ -1987,6 +2057,8 @@
     prevPolicyUrl = URL.createObjectURL(file);
     vid.src = prevPolicyUrl;
     vid.style.display = 'block';
+    vid.muted = false;
+    vid.volume = 1.0;
     if (poster) poster.style.display = 'none';
     if (hud) hud.style.display = 'none';
     if (st) st.textContent = '已切换本地视频：' + file.name;
@@ -1996,11 +2068,15 @@
   // ==================== P09 WANXIANG VIDEO MODAL ====================
   let prevWanxiangUrl = null;
   function openWanxiangModal() {
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     const modal = document.getElementById('wanxiangModal');
     const vid = document.getElementById('wanxiangVideo');
     if (!modal) return;
     modal.classList.add('open');
     if (vid) {
+      vid.muted = false;
+      vid.volume = 1.0;
       try { vid.currentTime = 0; } catch (_) {}
       vid.play().catch(()=>{});
     }
@@ -2281,11 +2357,12 @@
   function toggleChargeSfx() {
     const btn = document.getElementById('chargeSfxBtn');
     const wantOn = btn ? !btn.classList.contains('active') : chargeUserMuted;
-    hasUserGesture = true;
     chargeUserMuted = !wantOn;
     if (chargeUserMuted) {
       stopChargeAudio();
     } else {
+      globalMuted = false;
+      unlockAllMobileAudio(true);
       syncChargeSfxBtn();
       replaySpeedRace();
     }
@@ -2506,11 +2583,12 @@
   function toggleDealerSfx() {
     const btn = document.getElementById('dealerSfxBtn');
     const wantOn = btn ? !btn.classList.contains('active') : evUserMuted;
-    hasUserGesture = true;
     evUserMuted = !wantOn;
     if (evUserMuted) {
       stopEvAccelSound();
     } else {
+      globalMuted = false;
+      unlockAllMobileAudio(true);
       startEvAccelSound(true);
       if (!dealerAutoRunning) startDealerAuto();
     }
@@ -2562,7 +2640,8 @@
     }, 900);
   }
   function toggleDealerAuto() {
-    hasUserGesture = true;
+    globalMuted = false;
+    unlockAllMobileAudio(true);
     if (dealerAutoRunning) stopDealerAuto();
     else startDealerAuto();
   }
@@ -2577,6 +2656,13 @@
   ];
   let fwAutoTimer = null, fwStep = 0, fwUserMuted = false, fwAudioCtx = null;
 
+  function ensureFwAudio() {
+    if (fwAudioCtx) return fwAudioCtx;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    fwAudioCtx = new Ctx();
+    return fwAudioCtx;
+  }
   function syncFlywheelSfxBtn() {
     const btn = document.getElementById('flywheelSfxBtn');
     if (!btn) return;
@@ -2586,29 +2672,28 @@
   }
   function playBeanStepChime(idx) {
     if (fwUserMuted || !hasUserGesture) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx) return;
-    if (!fwAudioCtx) fwAudioCtx = new Ctx();
-    if (fwAudioCtx.state === 'suspended') {
-      fwAudioCtx.resume().catch(() => {});
+    const ctx = ensureFwAudio();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
     }
     const notes = [523.25, 587.33, 659.25, 783.99]; // C5 -> D5 -> E5 -> G5
     const f0 = notes[idx % 4];
-    const now = fwAudioCtx.currentTime;
+    const now = ctx.currentTime;
 
     const triggerDrop = (tStart, freq, peak) => {
-      const osc = fwAudioCtx.createOscillator();
-      const over = fwAudioCtx.createOscillator();
-      const g = fwAudioCtx.createGain();
+      const osc = ctx.createOscillator();
+      const over = ctx.createOscillator();
+      const g = ctx.createGain();
       osc.type = 'sine'; osc.frequency.setValueAtTime(freq, tStart);
       over.type = 'triangle'; over.frequency.setValueAtTime(freq * 2.0, tStart);
       g.gain.setValueAtTime(0.0001, tStart);
       g.gain.linearRampToValueAtTime(peak, tStart + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, tStart + 0.34);
       osc.connect(g);
-      const go = fwAudioCtx.createGain(); go.gain.value = 0.22;
+      const go = ctx.createGain(); go.gain.value = 0.22;
       over.connect(go); go.connect(g);
-      g.connect(fwAudioCtx.destination);
+      g.connect(ctx.destination);
       osc.start(tStart); over.start(tStart);
       osc.stop(tStart + 0.36); over.stop(tStart + 0.36);
     };
@@ -2620,8 +2705,11 @@
   function toggleFlywheelSfx() {
     const btn = document.getElementById('flywheelSfxBtn');
     const wantOn = btn ? !btn.classList.contains('active') : fwUserMuted;
-    hasUserGesture = true;
     fwUserMuted = !wantOn;
+    if (wantOn) {
+      globalMuted = false;
+      unlockAllMobileAudio(true);
+    }
     syncFlywheelSfxBtn();
     if (!fwUserMuted) playBeanStepChime(fwStep);
   }
@@ -2659,6 +2747,146 @@
     }, 2600);
   }
 
+  // ==================== MOBILE / WECHAT UNIFIED AUDIO UNLOCK ====================
+  function unlockAudioContextSync(ctx) {
+    if (!ctx) return;
+    try {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const b = ctx.createBuffer(1, 1, 22050);
+      const s = ctx.createBufferSource();
+      s.buffer = b;
+      s.connect(ctx.destination);
+      s.start(0);
+    } catch (_) {}
+  }
+
+  function syncGlobalSfxBtn() {
+    const btn = document.getElementById('globalSfxBtn');
+    if (!btn) return;
+    const on = hasUserGesture && !globalMuted && globalAudioUnlocked;
+    btn.classList.toggle('active', on);
+    btn.textContent = on ? '🔊 声音已开' : (globalMuted ? '🔇 声音已关' : '🔇 开启声音');
+  }
+
+  function unlockAllMobileAudio(fromDirectTap) {
+    hasUserGesture = true;
+    try {
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') {
+        navigator.audioSession.type = 'playback';
+      }
+    } catch (_) {}
+
+    if (fromDirectTap && !silentAudioPlayed) {
+      const sa = document.getElementById('iosSilentUnlockAudio');
+      if (sa) {
+        try {
+          sa.volume = 0.01;
+          const p = sa.play();
+          silentAudioPlayed = true;
+          if (p && typeof p.catch === 'function') p.catch(() => { silentAudioPlayed = false; });
+        } catch (_) {}
+      }
+    }
+
+    if (typeof ensureChargeAudio === 'function') unlockAudioContextSync(ensureChargeAudio());
+    if (typeof ensureEvAudio === 'function') unlockAudioContextSync(ensureEvAudio());
+    if (typeof ensureFwAudio === 'function') unlockAudioContextSync(ensureFwAudio());
+
+    globalAudioUnlocked = true;
+    syncGlobalSfxBtn();
+    syncChargeSfxBtn();
+    syncDealerSfxBtn();
+    syncFlywheelSfxBtn();
+  }
+
+  function toggleGlobalAudio() {
+    const active = slides[cur];
+    if (!globalMuted && globalAudioUnlocked) {
+      globalMuted = true;
+      userMutedCommute = true;
+      fireUserMuted = true;
+      chargeUserMuted = true;
+      evUserMuted = true;
+      fwUserMuted = true;
+
+      ['commuteVideo', 'fireVideo', 'policyVideo', 'wanxiangVideo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.muted = true;
+      });
+      stopChargeAudio();
+      stopEvAccelSound();
+      syncCommuteBtn();
+      syncFireAudioBtn();
+      syncDealerSfxBtn();
+      syncFlywheelSfxBtn();
+      syncGlobalSfxBtn();
+      return;
+    }
+
+    globalMuted = false;
+    userMutedCommute = false;
+    fireUserMuted = false;
+    chargeUserMuted = false;
+    evUserMuted = false;
+    fwUserMuted = false;
+    unlockAllMobileAudio(true);
+
+    if (active) {
+      if (active.querySelector('#commuteVideo')) enterCommuteSlide();
+      if (active.querySelector('#fireVideo')) enterFireSlide();
+      const pv = active.querySelector('#policyVideo');
+      if (pv && pv.style.display !== 'none') {
+        pv.muted = false; pv.volume = 1.0; pv.play().catch(() => {});
+      }
+      const wm = document.getElementById('wanxiangModal');
+      const wv = document.getElementById('wanxiangVideo');
+      if (wm && wm.classList.contains('open') && wv) {
+        wv.muted = false; wv.volume = 1.0; wv.play().catch(() => {});
+      }
+      if (active.querySelector('#speedRaceSvg')) {
+        syncChargeSfxBtn();
+        replaySpeedRace();
+      }
+      if (active.querySelector('#dealerVolSlider')) {
+        syncDealerSfxBtn();
+        startEvAccelSound(true);
+        if (!dealerAutoRunning) startDealerAuto();
+      }
+      if (active.querySelector('#flywheelStage')) {
+        syncFlywheelSfxBtn();
+        playBeanStepChime(fwStep);
+      }
+    }
+    syncGlobalSfxBtn();
+  }
+
+  document.addEventListener('WeixinJSBridgeReady', () => {
+    if (window.WeixinJSBridge && typeof window.WeixinJSBridge.invoke === 'function') {
+      try {
+        window.WeixinJSBridge.invoke('getNetworkType', {}, () => {
+          if (globalMuted) return;
+          unlockAllMobileAudio(false);
+          const active = slides[cur];
+          if (active && active.querySelector('#commuteVideo')) enterCommuteSlide();
+          if (active && active.querySelector('#fireVideo')) enterFireSlide();
+        });
+      } catch (_) {}
+    }
+  }, false);
+
+  window._yadeaAudioState = () => ({
+    hasUserGesture,
+    globalAudioUnlocked,
+    globalMuted,
+    charge: chargeAudioCtx ? chargeAudioCtx.state : 'null',
+    ev: evAudioCtx ? evAudioCtx.state : 'null',
+    fw: fwAudioCtx ? fwAudioCtx.state : 'null',
+  });
+
+  syncFsBtn();
+  syncGlobalSfxBtn();
   animateCounters(slides[0]);
 </script>
 
